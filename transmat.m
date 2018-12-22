@@ -1,5 +1,3 @@
-clear all, clc
-
 
 %parameters of transition matrix:
 durug=1.5;
@@ -11,7 +9,7 @@ durub=2.5;
 %transition probabilities
 pgg00 = (durug-1)/durug;
 pbb00 = (durub-1)/durub;
-pbg00 = 1.25*pbb00;  
+pbg00 = 1.25*pbb00;
 pgb00 = 0.75*pgg00;
 pgg01 = (unempg - unempg*pgg00)/(1-unempg);
 pbb01 = (unempb - unempb*pbb00)/(1-unempb);
@@ -21,7 +19,7 @@ pgg = (durgd-1)/durgd;
 pgb = 1 - (durbd-1)/durbd;
 pgg10 = 1 - (durug-1)/durug;
 pbb10 = 1 - (durub-1)/durub;
-pbg10 = 1 - 1.25*pbb00;  
+pbg10 = 1 - 1.25*pbb00;
 pgb10 = 1 - 0.75*pgg00;
 pgg11 = 1 - (unempg - unempg*pgg00)/(1-unempg);
 pbb11 = 1 - (unempb - unempb*pbb00)/(1-unempb);
@@ -54,5 +52,3 @@ for i=1:4
 end
 
 disp(['Stationary Distribution = [',num2str(pr_star),']'])
-
-
