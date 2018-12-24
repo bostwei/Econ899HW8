@@ -148,8 +148,8 @@ a1 = 0.999;
 b1 = 0.999;
 
 % interpolate 10 point in k = K = [0,15)
-k_space = linspace(0.1,14.99,20)'; 
-K_space = linspace(0.1,14.99,20)';
+k_space = [linspace(0.0001,K_ss,20),linspace(K_ss+0.01,14.99999,10)]'; 
+K_space = [linspace(0.0001,K_ss * N,20),linspace(K_ss * N+0.01,14.99999 * N,10)]'; 
 
 kk_space = linspace(0.1,14.99,2000)';
 % construct a space with K and Z
@@ -157,13 +157,13 @@ kk_space = linspace(0.1,14.99,2000)';
 Kez_space = [K_temp(:),e_emp(:),z_temp(:)];
 
 % calculate the future aggregate capital
-KK = exp(a0 + a1 * log(Kez_space(:,1))) .* Kez_space(:,2) + exp(b0 + b1 * log(Kez_space(:,1))).* (1-Kez_space(:,2));
+KK = exp(a0 + a1 * log(Kez_space(:,1))) .* Kez_space(:,3) + exp(b0 + b1 * log(Kez_space(:,1))).* (1-Kez_space(:,3));
 
 % calculate the accumulate labor choice
-L = Kez_space(:,2)* L_g  +  (1 - Kez_space(:,2)) * L_b;
+L = Kez_space(:,3)* L_g .* N +  (1 - Kez_space(:,3)) * L_b .* N;
 
 % calclulate the technology shock
-z = Kez_space(:,2) * zt(1) + (1 - Kez_space(:,2)) * zt(2); 
+z = Kez_space(:,3) * zt(1) + (1 - Kez_space(:,3)) * zt(2); 
 
 % calculate wage
 w = (1 - alpha) .* z .*(Kez_space(:,1)./L).^ alpha;
@@ -171,91 +171,108 @@ w = (1 - alpha) .* z .*(Kez_space(:,1)./L).^ alpha;
  % calculate the interst rate
 r = alpha .* z .*(Kez_space(:,1)./L).^ (1 - alpha); 
 
+% the following will divide into 4 group
+% -column 1 e = 1, z=1
+% -column 2 e = 0, z=1
+% -column 3 e = 1, z=0
+% -column 4 e = 0, z=0
+KK_temp = reshape(KK,size(k_space,1),2,2);
+L_temp = reshape(L,size(k_space,1),2,2);
+w_temp = reshape(w,size(k_space,1),2,2);
+r_temp = reshape(r,size(k_space,1),2,2);
+z_temp = reshape(z,size(k_space,1),2,2);
 
-KK = reshape(KK,2,20)';
-L = reshape(L,2,20)';
-w = reshape(w,2,20)';
-r = reshape(r,2,20)';
-z = reshape(z,2,20)';
+%% ----------------- generate person's choice given(k,z,e) ---------------
+ inputDec.K_space =K_space;
+ inputDec.kk_space = kk_space;
 
-%----------------- generate person's choice given(z,e) ---------------
-
-% calculate the utility given all these parameter
-v0 = zeros(size(K_space,1),2,2); % the v0(k,e,z)
-
-
-%% assembly all the input requried to calculate utility
-input.r = r;
-input.k = K_temp';
-input.w = w;
-input.e = z_temp'; % employment status
-
-input.e_bar = e_bar;
-input.delta = delta;
-
-input.beta = beta ; 
-
-tol = 10;
-Iter = 0;
-while tol > 0.001
-    
-input.v0 = v0;
-% calculate the desition choice given v0 and kk_space
-out = u(input,kk_space);
-
-% update v1 and v0;
-v1 = out.v1;
-dec = out.dec_k;
-dec_k = kk_space(dec);
-
-tol = max(max(abs(v1-v0)));
-
-v0 = v1;
-Iter = Iter+1;
-fprintf('This is %d iteration, the distance is %.4f .\n',Iter,tol);
-end
-
+ inputDec.r_temp = r_temp;
+ inputDec.K_temp = K_temp; 
+% Note here the column in the dimention represent the following
+% -column(:, 1,1) e = 1, z=1
+% -column(:, 1,2) e = 0, z=1
+% -column(:, 2,1) e = 1, z=0
+% -column(:, 2,2) e = 0, z=0 
+ inputDec.w_temp = w_temp;
+ inputDec.e_emp = e_emp; % employment status
+% Note here the column in the dimention represent the following
+% -column(:, 1,1) e = 1, z=1
+% -column(:, 1,2) e = 0, z=1
+% -column(:, 2,1) e = 1, z=0
+% -column(:, 2,2) e = 0, z=0 
+ inputDec.e_bar = e_bar;
+ inputDec.delta = delta;
+ inputDec.beta = beta;
+ inputDec.N = N;
+ 
+ tic
+ outDec = Dec(inputDec);
+ toc
 
 
 
 %%
 
-%------------ calcuate the accumulative capital and Labor choice-----------------
+%------------ calcuate the personal choice of capital-----------------
+% initial the asset choice for different people and 
 
-% % calculate the accumulative capital 
-% K = zeros(1,T);
-% K(1) = K_ss;
-% 
-% 
-% 
-% 
-% L = zeros(1,T);
-% z = zeros(1,T);
-% w = zeros(1,T);
-% r = zeros(1,T);
-% 
-% V = zeros(N,T); % preson n's capital choice given the state z
-% for t = 1:T-1
-%     % if current period is good 
-%     if Z(t) == 1 
-%        K(t+1) = exp(a0 + a1 * log(K(t)));
-%     
-%     % if the current period is bad
-%     else
-%        K(t+1) = exp(b0 + b1 * log(K(t)));
-%     end
-% 
-% 
-% % calculate the accumulate labor choice
-% L(t) = Z(t)* L_g  +  (1 - Z(t)) * L_b;
-% 
-% % calclulate the technology shock
-% z(t) = Z(t) * zt(1) + (1 - Z(t)) * zt(2); 
-% 
-% % calculate wage
-% w(t)= (1 - alpha) .* z .*(K(t)./L(t)).^ alpha;
-%  
-%  % calculate the interst rate
-% r(t) = alpha .* z .*(K(t)./L(t)).^ (1 - alpha); 
-% 
-% end
+ind_k = zeros(N,T); % individual asset choice.
+
+% extend the Z to each individual
+Z_ext = ones(N,1) * Z;
+
+% start with the initial asset holding to be the K_ss
+ind_k(:,1) = K_ss * ones(N,1);
+
+% initiate totol asset holding
+K_sum = zeros(1,T);
+K_sum(1) = K_ss;
+
+% calculate the aggregate labor supply
+L_sum = (L_g .* Z + L_b .*(1- Z)).*N;
+
+% initiate wage sequence
+w_seq = zeros(1,T);
+w_seq(1) = w;
+
+% initiate rate sequence
+r_seq = zeros(1,T);
+r_seq(1) = r;
+
+%%
+%Next period's asset holding depend by the interpolation of (k,e,z)
+for t = 2: 2
+      % calculate wage
+    w_seq(t) = (1 - alpha) .* Z_ext(:,t-1) .*(K_sum(:,t-1)./L_sum(:,t)).^ alpha;
+
+     % calculate the interst rate
+    r_seq(t) = alpha .*  Z_ext(:,t-1) .*(K_sum(:,t-1)./L_sum(:,t)).^ (1 - alpha); 
+ 
+ 
+    
+    % determined the asset holding next period
+    % e = 1, z = 1
+        k_1 = interp1(input.k(:,1,1),dec_k(:,1,1),...
+           ind_k(:,t-1),'spline').* employed(:,t-1) .*Z_ext(:,t-1);
+    % e = 0, z = 1 
+        k_1 = k_1 + interp1(input.k(:,1,2),dec_k(:,1,2),...
+       ind_k(:,t-1),'spline').*(1 - employed(:,t-1)) .*Z_ext(:,t-1);
+    % e = 1, z = 0 
+        k_1 = k_1 + interp1(input.k(:,2,1),dec_k(:,2,1),...
+       ind_k(:,t-1),'spline').*employed(:,t-1) .*(1 - Z_ext(:,t-1));
+    % e = 0, z = 0 
+        k_1 = k_1 + interp1(input.k(:,2,2),dec_k(:,2,2),...
+        ind_k(:,t-1),'spline').*(1-employed(:,t-1)) .*(1 - Z_ext(:,t-1));
+    
+    ind_k(:,t) = k_1;
+    
+    % sum of aggregate asst 
+    K_sum(:,t) = sum(ind_k(:,t),1);
+    
+        
+    
+
+    
+
+end
+
